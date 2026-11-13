@@ -432,6 +432,20 @@ impl PdfCraftApp {
                     self.apply_edit(Edit::InsertBlankPage { at: last + 1, width: w, height: h });
                 }
             }
+            "page.insert_lined" | "page.insert_grid" => {
+                if let (Some(i), Some(&last)) = (active, targets.last())
+                    && let Some(p) = self.session.get(self.views[i].id).and_then(|d| d.info.pages.get(last))
+                {
+                    // The page before as it is shown, so the ruling runs across a turned page too.
+                    let (w, h) = (f64::from(p.width).max(1.0), f64::from(p.height).max(1.0));
+                    let paper = if id == "page.insert_lined" { pdfcraft_engine::NotePaper::Lined } else { pdfcraft_engine::NotePaper::Grid };
+                    self.apply_edit(Edit::InsertNotePage { at: last + 1, width: w, height: h, paper });
+                }
+            }
+            "page.extend" | "page.extend_right" => {
+                let side = if id == "page.extend" { pdfcraft_engine::PageSide::Bottom } else { pdfcraft_engine::PageSide::Right };
+                self.apply_edit(Edit::ExtendPage { pages: targets, side, amount: pdfcraft_engine::EXTEND_PAGE_STEP });
+            }
             "page.insert" => self.insert_from_file_dialog(),
             "page.replace" => self.replace_pages_dialog(),
             "page.copy" => self.copy_pages(false),

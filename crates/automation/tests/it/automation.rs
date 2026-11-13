@@ -3822,6 +3822,59 @@ fn duplicating_and_cropping_through_tools() {
 }
 
 #[test]
+fn extending_pages_for_notes_through_tools() {
+    let dir = workdir("extend");
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({ "path": "a.pdf" }))["doc"].as_u64().unwrap();
+    // The fixture's pages are 200 × 300 points: page 1 grows 100 points downward, page 2 to the
+    // right by the default 10 cm, page 3 stays as it is.
+    let r = ok(&mut a, "page_extend", json!({ "doc": doc, "pages": [1], "amount": 100 }));
+    assert_eq!(r["page_sizes"][0], json!([200.0, 400.0]));
+    let r = ok(&mut a, "page_extend", json!({ "doc": doc, "pages": [2], "side": "right" }));
+    let width = r["page_sizes"][1][0].as_f64().unwrap();
+    assert!((width - (200.0 + 10.0 / 2.54 * 72.0)).abs() < 0.01, "{width}");
+    assert_eq!(r["page_sizes"][2], json!([200.0, 300.0]));
+    assert_eq!(page_text(&mut a, doc), ["Page 1", "Page 2", "Page 3"], "the text is still on its page");
+    // One undo step each, and the save keeps the new size.
+    ok(&mut a, "edit_undo", json!({ "doc": doc }));
+    ok(&mut a, "doc_save", json!({ "doc": doc, "path": "extended.pdf" }));
+    let saved = ok(&mut a, "doc_open", json!({ "path": "extended.pdf" }))["doc"].as_u64().unwrap();
+    let r = ok(&mut a, "page_extend", json!({ "doc": saved, "pages": [3], "amount": 1 }));
+    assert_eq!(r["page_sizes"], json!([[200.0, 400.0], [200.0, 300.0], [200.0, 301.0]]));
+    // Errors say what is allowed and change nothing.
+    for args in [json!({ "doc": doc, "pages": [1], "side": "top" }), json!({ "doc": doc, "pages": [9] }), json!({ "doc": doc, "pages": [] })] {
+        assert!(matches!(a.call("page_extend", &args), Err(ToolError::InvalidArgs(_))), "{args}");
+    }
+    for amount in [0.0, -10.0, 20_000.0] {
+        assert!(matches!(a.call("page_extend", &json!({ "doc": doc, "pages": [1], "amount": amount })), Err(ToolError::Failed(_))), "{amount}");
+    }
+}
+
+#[test]
+fn lined_and_grid_note_pages_through_tools() {
+    let dir = workdir("note-pages");
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({ "path": "a.pdf" }))["doc"].as_u64().unwrap();
+    ok(&mut a, "page_insert_blank", json!({ "doc": doc, "at": 2, "paper": "lined" }));
+    ok(&mut a, "page_insert_blank", json!({ "doc": doc, "at": 4, "paper": "grid", "width": 595, "height": 842 }));
+    assert_eq!(page_text(&mut a, doc), ["Page 1", "", "Page 2", "", "Page 3"], "the ruling is drawing, not text");
+    let sizes: Vec<Value> =
+        ok(&mut a, "doc_info", json!({ "doc": doc }))["pages"].as_array().unwrap().iter().map(|p| json!([p["width"], p["height"]])).collect();
+    assert_eq!((sizes[1].clone(), sizes[3].clone()), (json!([200.0, 300.0]), json!([595.0, 842.0])), "the neighbour's size by default");
+    // The ruling is drawn: a rendered note page differs from a blank one of the same size.
+    ok(&mut a, "page_insert_blank", json!({ "doc": doc, "at": 6 }));
+    let ruled = a.call("page_render", &json!({ "doc": doc, "page": 2, "dpi": 72 })).unwrap();
+    let blank = a.call("page_render", &json!({ "doc": doc, "page": 6, "dpi": 72 })).unwrap();
+    assert_ne!(ruled, blank);
+    ok(&mut a, "edit_undo", json!({ "doc": doc }));
+    ok(&mut a, "doc_save", json!({ "doc": doc, "path": "notes.pdf" }));
+    let saved = ok(&mut a, "doc_open", json!({ "path": "notes.pdf" }))["doc"].as_u64().unwrap();
+    assert_eq!(page_text(&mut a, saved).len(), 5);
+    assert!(matches!(a.call("page_insert_blank", &json!({ "doc": doc, "at": 1, "paper": "dotted" })), Err(ToolError::InvalidArgs(_))));
+    assert!(matches!(a.call("page_insert_blank", &json!({ "doc": doc, "at": 1, "paper": "grid", "width": 0 })), Err(ToolError::InvalidArgs(_))));
+}
+
+#[test]
 fn headers_watermarks_and_backgrounds_through_tools() {
     let dir = workdir("marks");
     let mut a = auto(&dir);

@@ -19,6 +19,7 @@ mod comments;
 mod dedupe;
 mod import;
 mod labels;
+mod note_paper;
 mod outline;
 mod outline_io;
 mod pdfx;
@@ -28,7 +29,7 @@ pub mod view;
 mod xmp;
 
 pub use attachments::{add_attachment, attachment_keys, delete_attachment, mime_for_name, set_attachment_description};
-pub use boxes::{BoxSpec, PageBox, page_boxes, set_page_box};
+pub use boxes::{BoxSpec, EXTEND_PAGE_STEP, MAX_PAGE_SIDE, PageBox, PageSide, extend_page, page_boxes, set_page_box};
 pub use comments::import_comments;
 pub use dedupe::dedupe_resources;
 pub use import::{
@@ -37,6 +38,7 @@ pub use import::{
     insert_file_pages, page_as_form, reachable, split, split_ranges,
 };
 pub use labels::{LabelRange, LabelStyle, PageLabels, number_pages, page_label_ranges, page_labels, set_page_label_ranges};
+pub use note_paper::{GRID_SPACING, LINE_SPACING, NotePaper, insert_note_page, note_paper_content};
 pub use outline::{
     Bookmark, BookmarkPage, OutlineEntry, OutlineError, add_bookmark, add_bookmark_at, add_bookmark_tree, bookmark_page, bookmarks, delete_bookmark,
     move_bookmark, rename_bookmark, set_bookmark_color, set_bookmark_open, set_bookmark_page, set_bookmark_style, top_level_bookmarks,

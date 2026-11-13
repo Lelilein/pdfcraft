@@ -156,6 +156,7 @@ impl Automation {
                 self.apply(&a, Edit::ReversePages { pages })?
             }
             "page_insert_blank" => self.insert_blank(&a)?,
+            "page_extend" => self.page_extend(&a)?,
             "page_insert_file" => self.insert_file(&a)?,
             "page_extract" => self.page_extract(&a)?,
             "doc_combine" => self.doc_combine(&a)?,

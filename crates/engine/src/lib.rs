@@ -84,14 +84,15 @@ pub use stamp_preview::{CommentLayer, StampPreview};
 pub use text_preview::{TextEditPreview, UnmarkedPages};
 
 pub use pdfcraft_organize::{
-    BoxSpec, FieldConflicts, MAX_IMPORT_BOOKMARKS, OutlineNode, OutlineTree, PageBox, SplitBy, Transition, TransitionSpec, mime_for_name,
-    split_ranges, unmapped as outline_unmapped, view_arity as outline_view_arity,
+    BoxSpec, FieldConflicts, MAX_IMPORT_BOOKMARKS, NotePaper, OutlineNode, OutlineTree, PageBox, PageSide, SplitBy, Transition, TransitionSpec,
+    mime_for_name, split_ranges, unmapped as outline_unmapped, view_arity as outline_view_arity,
 };
 
 pub use pdfcraft_organize::LabelStyle;
 pub use pdfcraft_organize::Standard;
 pub use pdfcraft_organize::check_custom_key;
 pub use pdfcraft_organize::view::{InitialView, Layout as InitialLayout, Magnification, Navigation};
+pub use pdfcraft_organize::{EXTEND_PAGE_STEP, MAX_PAGE_SIDE};
 
 pub use pdfcraft_cos::{Algorithm, civil_from_days};
 pub use pdfcraft_create::{

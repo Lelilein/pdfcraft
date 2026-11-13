@@ -411,6 +411,12 @@ pub const COMMANDS: &[CommandSpec] = &[
     c("page.rotate_ccw", "Rotate pages counterclockwise", PAGES, None, Assembly, "rotate-ccw"),
     c("page.delete", "Delete pages", PAGES, None, Assembly, "trash-2"),
     c("page.insert_blank", "Insert blank page", PAGES, None, Assembly, "file-plus"),
+    // Room to write notes in, as a notebook page grows (EXTEND_PAGE_STEP each time).
+    c("page.extend", "Extend page downward", PAGES, None, Assembly, "file-plus-2"),
+    c("page.extend_right", "Extend page to the right", PAGES, None, Assembly, "move-horizontal"),
+    // A ruled page after the selection, the size of the page before it, to write notes on.
+    c("page.insert_lined", "Insert lined note page", PAGES, None, Assembly, "rows-3"),
+    c("page.insert_grid", "Insert grid note page", PAGES, None, Assembly, "grid-3x3"),
     c("page.rotate_dialog", "Rotate pages…", PAGES, None, Assembly, "rotate-cw"),
     c("page.duplicate", "Duplicate pages", PAGES, None, Assembly, "copy-plus"),
     c("page.reverse", "Reverse pages", PAGES, None, Assembly, "arrow-up-down"),

@@ -152,3 +152,96 @@ pub fn set_page_box(doc: &mut Document, pages: &[usize], which: PageBox, spec: B
     }
     Ok(())
 }
+
+/// The largest page side ISO 32000-2 Annex C recommends (200 inches in default user space).
+pub const MAX_PAGE_SIDE: f64 = 14_400.0;
+
+/// How far one Extend Page step grows a page: 10 cm, room for a few lines of notes.
+pub const EXTEND_PAGE_STEP: f64 = 10.0 / 2.54 * 72.0;
+
+/// The side of a page, as it is shown (after its `/Rotate`), that [`extend_page`] grows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PageSide {
+    Bottom,
+    Right,
+}
+
+impl PageSide {
+    pub fn from_name(s: &str) -> Option<Self> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "bottom" => Some(Self::Bottom),
+            "right" => Some(Self::Right),
+            _ => None,
+        }
+    }
+}
+
+/// Grows `pages` (0-based) by `amount` points on `side` as each page is shown, leaving blank room
+/// to write in, as a notebook page grows. The page content and its comments keep their
+/// coordinates: only the media box (and a crop box, when the page has one) moves out on that side,
+/// so nothing already on the page moves and the change undoes cleanly. The side is the shown one,
+/// so a page turned with `/Rotate` grows downwards on screen too (§7.7.3.3: 90 turns clockwise).
+/// Refuses, changing nothing, an amount that is not a positive number or a page that would grow
+/// past [`MAX_PAGE_SIDE`].
+pub fn extend_page(doc: &mut Document, pages: &[usize], side: PageSide, amount: f64) -> Result<(), OrganizeError> {
+    let bad = |m: String| OrganizeError::InvalidBox(m);
+    if !amount.is_finite() || amount <= 0.0 {
+        return Err(bad("the page can only grow by a positive number of points".into()));
+    }
+    let all = walk(doc)?;
+    check(pages, all.len())?;
+    // Each page grows once, however often it is listed.
+    let mut unique = pages.to_vec();
+    unique.sort_unstable();
+    unique.dedup();
+    let mut plan = Vec::new();
+    for i in unique {
+        let Some((page, inherited)) = all.get(i) else {
+            return Err(OrganizeError::NoSuchPage(i));
+        };
+        let d = doc.get(*page).as_dict().cloned().unwrap_or_default();
+        let own = |k: &[u8]| rect_of(d.get(k).or_else(|| inherited.get(k)), doc);
+        let media = own(b"MediaBox").unwrap_or([0.0, 0.0, 612.0, 792.0]);
+        let crop = own(b"CropBox").and_then(|c| clip(c, media));
+        let rotate = d.get(b"Rotate").or_else(|| inherited.get(b"Rotate")).and_then(|v| doc.resolve(v).as_int()).unwrap_or(0).rem_euclid(360);
+        // Which edge of the unrotated page is shown at the bottom or on the right, and whether
+        // growing it means a smaller (min) or larger (max) coordinate.
+        let edge = match (side, rotate) {
+            (PageSide::Bottom, 90) | (PageSide::Right, 0) => 2,    // x max
+            (PageSide::Bottom, 180) | (PageSide::Right, 90) => 3,  // y max
+            (PageSide::Bottom, 270) | (PageSide::Right, 180) => 0, // x min
+            _ => 1,                                                // y min: Bottom at 0, Right at 270
+        };
+        let grow = |r: [f64; 4]| {
+            let mut r = r;
+            if edge < 2 {
+                r[edge] -= amount;
+            } else {
+                r[edge] += amount;
+            }
+            r
+        };
+        let new_media = grow(media);
+        let (w, h) = (new_media[2] - new_media[0], new_media[3] - new_media[1]);
+        if !w.is_finite() || !h.is_finite() || w > MAX_PAGE_SIDE || h > MAX_PAGE_SIDE {
+            return Err(bad(format!("page {} would be larger than {MAX_PAGE_SIDE} points (200 inches)", i + 1)));
+        }
+        // The crop box keeps its other three sides; on the grown side it reaches the new edge.
+        let new_crop = crop.map(|c| {
+            let mut c = c;
+            c[edge] = new_media[edge];
+            c
+        });
+        plan.push((*page, new_media, new_crop));
+    }
+    let rect = |r: [f64; 4]| Object::Array(r.iter().map(|v| Object::Real(*v)).collect());
+    for (page, media, crop) in plan {
+        doc.update_dict(page, |d| {
+            d.set(b"MediaBox".to_vec(), rect(media));
+            if let Some(c) = crop {
+                d.set(b"CropBox".to_vec(), rect(c));
+            }
+        })?;
+    }
+    Ok(())
+}

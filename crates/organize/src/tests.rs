@@ -4982,3 +4982,103 @@ fn combining_some_pages_brings_only_their_bookmarks_and_no_attachments() {
     assert_eq!(source_bookmarks(&all), [("Chapter one".to_string(), vec!["Section".to_string()])]);
     assert!(attachments(&all));
 }
+
+#[test]
+fn extending_a_page_grows_the_shown_bottom_and_keeps_the_content_in_place() {
+    // Fixture pages 1–2 inherit a 300×400 media box and /Rotate 90; page 3 has its own 500×500.
+    let mut doc = open(fixture());
+    let content_before = page_dict(&doc, 2).get(b"Contents").cloned();
+    // Page 3 is turned 90° clockwise too: its shown bottom is the unrotated right edge (x max).
+    extend_page(&mut doc, &[2, 2], PageSide::Bottom, 200.0).unwrap();
+    assert_eq!(page_boxes(&doc).unwrap()[2][0], [0.0, 0.0, 700.0, 500.0], "grown once, on the shown bottom");
+    assert_eq!(page_dict(&doc, 2).get(b"Contents").cloned(), content_before, "the content stream is untouched");
+
+    // An unturned page grows downwards: y min, below the old content, and a crop box follows.
+    let mut d = open(build(
+        &[
+            "<< /Type /Catalog /Pages 2 0 R >>".into(),
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".into(),
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 400] /CropBox [10 10 290 390] >>".into(),
+        ],
+        "/Root 1 0 R",
+    ));
+    extend_page(&mut d, &[0], PageSide::Bottom, 100.0).unwrap();
+    let d = open(write_incremental(&d, &SaveOptions::default()).unwrap());
+    let b = page_boxes(&d).unwrap();
+    assert_eq!(b[0][0], [0.0, -100.0, 300.0, 400.0]);
+    assert_eq!(b[0][1], [10.0, -100.0, 290.0, 390.0], "the crop box keeps its other sides and reaches the new edge");
+    let mut d = d;
+    extend_page(&mut d, &[0], PageSide::Right, 50.0).unwrap();
+    assert_eq!(page_boxes(&d).unwrap()[0][0], [0.0, -100.0, 350.0, 400.0]);
+}
+
+#[test]
+fn extending_a_page_follows_every_rotation() {
+    for (rotate, bottom, right) in [
+        (0, [0.0, -10.0, 300.0, 400.0], [0.0, 0.0, 310.0, 400.0]),
+        (90, [0.0, 0.0, 310.0, 400.0], [0.0, 0.0, 300.0, 410.0]),
+        (180, [0.0, 0.0, 300.0, 410.0], [-10.0, 0.0, 300.0, 400.0]),
+        (270, [-10.0, 0.0, 300.0, 400.0], [0.0, -10.0, 300.0, 400.0]),
+    ] {
+        for (side, expected) in [(PageSide::Bottom, bottom), (PageSide::Right, right)] {
+            let mut d = open(build(
+                &[
+                    "<< /Type /Catalog /Pages 2 0 R >>".into(),
+                    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".into(),
+                    format!("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 400] /Rotate {rotate} >>"),
+                ],
+                "/Root 1 0 R",
+            ));
+            extend_page(&mut d, &[0], side, 10.0).unwrap();
+            assert_eq!(page_boxes(&d).unwrap()[0][0], expected, "/Rotate {rotate}, {side:?}");
+            assert!(!page_dict(&d, 0).contains(b"CropBox"), "no crop box is added where there was none");
+        }
+    }
+}
+
+#[test]
+fn extending_a_page_refuses_bad_amounts_and_oversized_pages_without_changing_anything() {
+    let mut doc = open(fixture());
+    let before = page_boxes(&doc).unwrap();
+    for amount in [0.0, -5.0, f64::NAN, f64::INFINITY] {
+        assert!(matches!(extend_page(&mut doc, &[0], PageSide::Bottom, amount), Err(OrganizeError::InvalidBox(_))), "{amount}");
+    }
+    // Page 1 fits; page 3 would pass the limit, so neither grows.
+    assert!(matches!(extend_page(&mut doc, &[0, 2], PageSide::Bottom, MAX_PAGE_SIDE - 450.0), Err(OrganizeError::InvalidBox(_))));
+    assert_eq!(extend_page(&mut doc, &[9], PageSide::Bottom, 10.0), Err(OrganizeError::NoSuchPage(9)));
+    assert_eq!(page_boxes(&doc).unwrap(), before);
+}
+
+#[test]
+fn note_pages_are_ruled_and_inserted_where_asked() {
+    let mut doc = open(fixture());
+    insert_note_page(&mut doc, 1, 595.0, 842.0, NotePaper::Lined).unwrap();
+    insert_note_page(&mut doc, 3, 595.0, 842.0, NotePaper::Grid).unwrap();
+    let doc = open(write_incremental(&doc, &SaveOptions::default()).unwrap());
+    assert_eq!(page_count(&doc).unwrap(), 5);
+    let lines = |i: usize| {
+        let c = page_dict(&doc, i).get(b"Contents").cloned().unwrap();
+        let bytes = crate::prune::content_bytes(&doc, &c).unwrap().0;
+        String::from_utf8(bytes).unwrap().matches(" l\n").count()
+    };
+    // A4 lined: from 20 mm below the top to the 10 mm bottom margin, 8 mm apart.
+    assert_eq!(lines(1), 34);
+    // A4 grid inside 10 mm margins: 37 × 55 whole squares of 5 mm, so 38 + 56 lines.
+    assert_eq!(lines(3), 38 + 56);
+    assert_eq!(page_boxes(&doc).unwrap()[1][0], [0.0, 0.0, 595.0, 842.0]);
+    assert_eq!(page_dict(&doc, 2).get(b"Contents"), page_dict(&open(fixture()), 1).get(b"Contents"), "the page after is the old page 2");
+}
+
+#[test]
+fn note_pages_refuse_impossible_sizes_and_draw_nothing_on_tiny_ones() {
+    let mut doc = open(fixture());
+    for (w, h) in [(0.0, 100.0), (100.0, f64::NAN), (20_000.0, 100.0), (-1.0, -1.0)] {
+        assert!(matches!(insert_note_page(&mut doc, 0, w, h, NotePaper::Grid), Err(OrganizeError::InvalidBox(_))), "{w} × {h}");
+    }
+    assert_eq!(page_count(&doc).unwrap(), 3, "nothing inserted");
+    for paper in [NotePaper::Lined, NotePaper::Grid] {
+        assert_eq!(note_paper_content(paper, 10.0, 10.0), b"q 0.4 w 0.75 0.82 0.9 RG\nS Q\n", "smaller than the margins: no lines");
+    }
+    // The largest page stays a few thousand lines.
+    assert!(String::from_utf8(note_paper_content(NotePaper::Grid, MAX_PAGE_SIDE, MAX_PAGE_SIDE)).unwrap().matches(" l\n").count() < 2100);
+}

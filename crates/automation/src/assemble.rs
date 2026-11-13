@@ -154,7 +154,27 @@ impl Automation {
         if !(1.0..=14400.0).contains(&width) || !(1.0..=14400.0).contains(&height) {
             return Err(ToolError::InvalidArgs("width and height must be between 1 and 14400 points".into()));
         }
-        self.apply(a, Edit::InsertBlankPage { at, width, height })
+        match a.opt_str("paper")? {
+            None | Some("blank") => self.apply(a, Edit::InsertBlankPage { at, width, height }),
+            Some(p) => {
+                let paper = pdfcraft_engine::NotePaper::from_name(p)
+                    .ok_or_else(|| ToolError::InvalidArgs(format!("paper must be \"blank\", \"lined\" or \"grid\", not {p:?}")))?;
+                self.apply(a, Edit::InsertNotePage { at, width, height, paper })
+            }
+        }
+    }
+
+    pub(crate) fn page_extend(&mut self, a: &Args) -> Result<Value> {
+        use pdfcraft_engine::{EXTEND_PAGE_STEP, PageSide};
+        let pages = self.pages(a, "pages")?;
+        let side = match a.opt_str("side")? {
+            None => PageSide::Bottom,
+            Some(s) => PageSide::from_name(s).ok_or_else(|| ToolError::InvalidArgs(format!("side must be \"bottom\" or \"right\", not {s:?}")))?,
+        };
+        let amount = a.opt_num("amount")?.unwrap_or(EXTEND_PAGE_STEP);
+        let mut out = self.apply(a, Edit::ExtendPage { pages, side, amount })?;
+        out["page_sizes"] = json!(self.doc(a)?.info.pages.iter().map(|p| [p.width, p.height]).collect::<Vec<_>>());
+        Ok(out)
     }
 
     pub(crate) fn insert_file(&mut self, a: &Args) -> Result<Value> {
