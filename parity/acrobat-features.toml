@@ -2798,6 +2798,18 @@ evidence = ["crates/organize/src/tests.rs::extending_a_page_grows_the_shown_bott
 notes = "Not an Acrobat feature: blank room to write notes in, as a notebook page grows. Pages ▸ Extend page downward / to the right and the Pages panel's Page tools grow the selected pages (the current page when none is) by 10 cm on the shown side, following /Rotate; the media box, and a crop box when the page has one, move out on that side, so the content and comments keep their place. One undo step; refused past 200 inches. page_extend takes any amount. Missing: inserting room in the middle of a page."
 
 [[feature]]
+id = "organize.note-pages"
+title = "Insert lined or grid note pages"
+area = "D"
+tier = "P2"
+milestone = "M4"
+status = "shipped"
+commands = ["page.insert_lined", "page.insert_grid"]
+tools = ["page_insert_blank"]
+evidence = ["crates/organize/src/tests.rs::note_pages_are_ruled_and_inserted_where_asked", "crates/organize/src/tests.rs::note_pages_refuse_impossible_sizes_and_draw_nothing_on_tiny_ones", "crates/automation/tests/it/automation.rs::lined_and_grid_note_pages_through_tools", "crates/ui-egui/tests/it/view.rs::the_pages_panel_inserts_ruled_note_pages"]
+notes = "Not an Acrobat feature: a page to write notes on, as in a paper notebook. Pages ▸ Insert lined / grid note page and the Pages panel's Page tools insert it after the selection, the size of the page before it as shown; page_insert_blank takes paper lined or grid. Lined: light lines 8 mm apart from 20 mm below the top; grid: 5 mm squares inside 10 mm margins. The ruling is page content (it prints and is not text). Missing: other spacings, dotted paper and a choice of colour."
+
+[[feature]]
 id = "organize.insert-from-file"
 title = "Insert pages from another file"
 area = "D"

@@ -14,6 +14,7 @@ pub(crate) fn check_permission(edit: &Edit, p: &pdfcraft_cos::Permissions) -> Re
         | Edit::MovePages { .. }
         | Edit::ReversePages { .. }
         | Edit::InsertBlankPage { .. }
+        | Edit::InsertNotePage { .. }
         | Edit::DuplicatePages { .. }
         | Edit::ReplacePages { .. }
         | Edit::SetPageBox { .. }
@@ -534,6 +535,9 @@ pub(crate) fn run_edit(doc: &mut pdfcraft_cos::Document, edit: &Edit, cx: &mut E
         Edit::ReversePages { pages } => pdfcraft_organize::reverse_pages(doc, pages)?,
         Edit::InsertBlankPage { at, width, height } => {
             pdfcraft_organize::insert_blank_page(doc, *at, *width, *height)?;
+        }
+        Edit::InsertNotePage { at, width, height, paper } => {
+            pdfcraft_organize::insert_note_page(doc, *at, *width, *height, *paper)?;
         }
         Edit::SetInfo { key, value } => pdfcraft_organize::set_info(doc, key, value)?,
         Edit::DuplicatePages { pages, at } => {

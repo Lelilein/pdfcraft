@@ -62,7 +62,7 @@ fn select_after_edit(
             let at = (*at).min(info.pages.len().saturating_sub(n));
             view.select_pages(&(at..at + n).collect::<Vec<_>>());
         }
-        Edit::InsertBlankPage { at, .. } => {
+        Edit::InsertBlankPage { at, .. } | Edit::InsertNotePage { at, .. } => {
             clear_shifted_page_comment_state(view, *at);
             view.select_pages(&[(*at).min(info.pages.len() - 1)]);
         }

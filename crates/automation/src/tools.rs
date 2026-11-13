@@ -332,10 +332,10 @@ pub fn tools() -> Vec<ToolDef> {
         t("page_reverse", "Reverse pages", "Reverse the order of pages among the positions they occupy: the listed pages (at least two), or the whole document when pages is omitted. Undoable.")
             .cmd("page.reverse")
             .with(schema(json!({ "doc": doc(), "pages": pages("to reverse (default: all)") }), &["doc"])),
-        t("page_insert_blank", "Insert a blank page", "Insert a blank page so it becomes page `at`. Size defaults to the neighbouring page. Undoable.")
+        t("page_insert_blank", "Insert a blank page", "Insert a blank page so it becomes page `at`. Size defaults to the neighbouring page. paper: lined (lines 8 mm apart) or grid (5 mm squares) makes it a ruled note page to write on (Pages ▸ Insert lined / grid note page). Undoable.")
             .cmd("page.insert_blank")
             .with(schema(
-                json!({ "doc": doc(), "at": { "type": "integer", "minimum": 1 }, "width": { "type": "number", "description": "Points." }, "height": { "type": "number", "description": "Points." } }),
+                json!({ "doc": doc(), "at": { "type": "integer", "minimum": 1 }, "width": { "type": "number", "description": "Points." }, "height": { "type": "number", "description": "Points." }, "paper": { "type": "string", "enum": ["blank", "lined", "grid"] } }),
                 &["doc", "at"],
             )),
         t("page_extend", "Extend pages", "Grow pages on their shown bottom (default) or right side by `amount` points (default 283.46, 10 cm), leaving blank room to write notes in. What is on the page, comments included, stays where it is. Undoable.")

@@ -2917,6 +2917,32 @@ fn the_pages_panel_extends_the_selected_pages_for_notes() {
     assert_eq!(sizes(&h), before, "each is one undo step");
 }
 
+/// Note pages: Page tools ▸ Insert a grid note page and Pages ▸ Insert lined note page add a
+/// ruled page after the selection, the size of the page before it, one undo step each.
+#[test]
+fn the_pages_panel_inserts_ruled_note_pages() {
+    let mut h = harness(&[("panel", "pages")]);
+    let id = h.state().views[0].id;
+    let count = |h: &Harness<'static, PdfCraftApp>| h.state().session.get(id).unwrap().info.pages.len();
+    h.state_mut().views[0].select_pages(&[0]);
+    h.run_steps(2);
+    h.get_all_by_label("Page tools").find(|n| n.rect().left() > 1000.0).expect("Page tools in the Pages panel").click();
+    h.run_steps(2);
+    h.get_by_label("Insert a grid note page after the selection").click();
+    h.run_steps(3);
+    assert_eq!(count(&h), 4);
+    let doc = h.state().session.get(id).unwrap();
+    assert_eq!((doc.info.pages[1].width, doc.info.pages[1].height), (doc.info.pages[0].width, doc.info.pages[0].height));
+    assert_eq!(doc.can_undo(), Some("Insert note page"));
+    h.state_mut().execute("page.insert_lined");
+    h.run_steps(3);
+    assert_eq!(count(&h), 5);
+    h.state_mut().execute("edit.undo");
+    h.state_mut().execute("edit.undo");
+    h.run_steps(2);
+    assert_eq!(count(&h), 3, "each is one undo step");
+}
+
 /// CodeRabbit on #4583: the Page tools menu's file items work from the menu too. Insert pages
 /// from a file puts the picked file's pages after the selection; Extract the selected pages
 /// opens Extract for the selection and writes it.

@@ -5048,3 +5048,37 @@ fn extending_a_page_refuses_bad_amounts_and_oversized_pages_without_changing_any
     assert_eq!(extend_page(&mut doc, &[9], PageSide::Bottom, 10.0), Err(OrganizeError::NoSuchPage(9)));
     assert_eq!(page_boxes(&doc).unwrap(), before);
 }
+
+#[test]
+fn note_pages_are_ruled_and_inserted_where_asked() {
+    let mut doc = open(fixture());
+    insert_note_page(&mut doc, 1, 595.0, 842.0, NotePaper::Lined).unwrap();
+    insert_note_page(&mut doc, 3, 595.0, 842.0, NotePaper::Grid).unwrap();
+    let doc = open(write_incremental(&doc, &SaveOptions::default()).unwrap());
+    assert_eq!(page_count(&doc).unwrap(), 5);
+    let lines = |i: usize| {
+        let c = page_dict(&doc, i).get(b"Contents").cloned().unwrap();
+        let bytes = crate::prune::content_bytes(&doc, &c).unwrap().0;
+        String::from_utf8(bytes).unwrap().matches(" l\n").count()
+    };
+    // A4 lined: from 20 mm below the top to the 10 mm bottom margin, 8 mm apart.
+    assert_eq!(lines(1), 34);
+    // A4 grid inside 10 mm margins: 37 × 55 whole squares of 5 mm, so 38 + 56 lines.
+    assert_eq!(lines(3), 38 + 56);
+    assert_eq!(page_boxes(&doc).unwrap()[1][0], [0.0, 0.0, 595.0, 842.0]);
+    assert_eq!(page_dict(&doc, 2).get(b"Contents"), page_dict(&open(fixture()), 1).get(b"Contents"), "the page after is the old page 2");
+}
+
+#[test]
+fn note_pages_refuse_impossible_sizes_and_draw_nothing_on_tiny_ones() {
+    let mut doc = open(fixture());
+    for (w, h) in [(0.0, 100.0), (100.0, f64::NAN), (20_000.0, 100.0), (-1.0, -1.0)] {
+        assert!(matches!(insert_note_page(&mut doc, 0, w, h, NotePaper::Grid), Err(OrganizeError::InvalidBox(_))), "{w} × {h}");
+    }
+    assert_eq!(page_count(&doc).unwrap(), 3, "nothing inserted");
+    for paper in [NotePaper::Lined, NotePaper::Grid] {
+        assert_eq!(note_paper_content(paper, 10.0, 10.0), b"q 0.4 w 0.75 0.82 0.9 RG\nS Q\n", "smaller than the margins: no lines");
+    }
+    // The largest page stays a few thousand lines.
+    assert!(String::from_utf8(note_paper_content(NotePaper::Grid, MAX_PAGE_SIDE, MAX_PAGE_SIDE)).unwrap().matches(" l\n").count() < 2100);
+}
