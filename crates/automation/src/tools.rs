@@ -338,6 +338,17 @@ pub fn tools() -> Vec<ToolDef> {
                 json!({ "doc": doc(), "at": { "type": "integer", "minimum": 1 }, "width": { "type": "number", "description": "Points." }, "height": { "type": "number", "description": "Points." } }),
                 &["doc", "at"],
             )),
+        t("page_extend", "Extend pages", "Grow pages on their shown bottom (default) or right side by `amount` points (default 283.46, 10 cm), leaving blank room to write notes in. What is on the page, comments included, stays where it is. Undoable.")
+            .cmd("page.extend")
+            .with(schema(
+                json!({
+                    "doc": doc(),
+                    "pages": pages("to extend"),
+                    "side": { "type": "string", "enum": ["bottom", "right"] },
+                    "amount": { "type": "number", "exclusiveMinimum": 0, "maximum": 14400, "description": "Points." },
+                }),
+                &["doc", "pages"],
+            )),
         t("page_insert_file", "Insert pages from a file", "Insert pages of another PDF so the first becomes page `at`. Its bookmarks come along, collapsed under one bookmark named after the file, placed among the document's bookmarks where the pages went. Undoable.")
             .cmd("page.insert")
             .with(schema(json!({ "doc": doc(), "path": { "type": "string" }, "at": { "type": "integer", "minimum": 1 }, "pages": pages("of the source file (default: all)") }), &["doc", "path", "at"])),

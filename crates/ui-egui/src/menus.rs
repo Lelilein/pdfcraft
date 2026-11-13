@@ -179,6 +179,8 @@ const PAGES: &[&str] = &[
     "page.organize",
     SEP,
     "page.insert_blank",
+    "page.extend",
+    "page.extend_right",
     "page.insert",
     "page.replace",
     "page.extract",

@@ -2786,6 +2786,18 @@ evidence = ["crates/organize/src/tests.rs::inserts_blank_page", "crates/ui-egui/
 notes = ""
 
 [[feature]]
+id = "organize.extend-page"
+title = "Extend pages for notes"
+area = "D"
+tier = "P2"
+milestone = "M4"
+status = "shipped"
+commands = ["page.extend", "page.extend_right"]
+tools = ["page_extend"]
+evidence = ["crates/organize/src/tests.rs::extending_a_page_grows_the_shown_bottom_and_keeps_the_content_in_place", "crates/organize/src/tests.rs::extending_a_page_follows_every_rotation", "crates/organize/src/tests.rs::extending_a_page_refuses_bad_amounts_and_oversized_pages_without_changing_anything", "crates/automation/tests/it/automation.rs::extending_pages_for_notes_through_tools", "crates/ui-egui/tests/it/view.rs::the_pages_panel_extends_the_selected_pages_for_notes"]
+notes = "Not an Acrobat feature: blank room to write notes in, as a notebook page grows. Pages ▸ Extend page downward / to the right and the Pages panel's Page tools grow the selected pages (the current page when none is) by 10 cm on the shown side, following /Rotate; the media box, and a crop box when the page has one, move out on that side, so the content and comments keep their place. One undo step; refused past 200 inches. page_extend takes any amount. Missing: inserting room in the middle of a page."
+
+[[feature]]
 id = "organize.insert-from-file"
 title = "Insert pages from another file"
 area = "D"

@@ -432,6 +432,10 @@ impl PdfCraftApp {
                     self.apply_edit(Edit::InsertBlankPage { at: last + 1, width: w, height: h });
                 }
             }
+            "page.extend" | "page.extend_right" => {
+                let side = if id == "page.extend" { pdfcraft_engine::PageSide::Bottom } else { pdfcraft_engine::PageSide::Right };
+                self.apply_edit(Edit::ExtendPage { pages: targets, side, amount: pdfcraft_engine::EXTEND_PAGE_STEP });
+            }
             "page.insert" => self.insert_from_file_dialog(),
             "page.replace" => self.replace_pages_dialog(),
             "page.copy" => self.copy_pages(false),

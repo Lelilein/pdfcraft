@@ -28,7 +28,7 @@ pub mod view;
 mod xmp;
 
 pub use attachments::{add_attachment, attachment_keys, delete_attachment, mime_for_name, set_attachment_description};
-pub use boxes::{BoxSpec, PageBox, page_boxes, set_page_box};
+pub use boxes::{BoxSpec, EXTEND_PAGE_STEP, MAX_PAGE_SIDE, PageBox, PageSide, extend_page, page_boxes, set_page_box};
 pub use comments::import_comments;
 pub use dedupe::dedupe_resources;
 pub use import::{

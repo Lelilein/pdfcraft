@@ -20,6 +20,8 @@ pub const EDIT_LABELS: &[&str] = &[
     "Crop page",
     "Crop pages",
     "Set page boxes",
+    "Extend page",
+    "Extend pages",
     "Set page transitions",
     "Change Title",
     "Change Author",
@@ -191,6 +193,7 @@ impl Edit {
             Edit::ReplacePages { pages, .. } => plural("Replace page", "Replace pages", pages.len()),
             Edit::SetPageBox { pages, which: PageBox::Crop, .. } => plural("Crop page", "Crop pages", pages.len()),
             Edit::SetPageBox { .. } => Label::of("Set page boxes"),
+            Edit::ExtendPage { pages, .. } => plural("Extend page", "Extend pages", pages.len()),
             Edit::SetTransition { .. } => Label::of("Set page transitions"),
             // The four `/Info` keys PdfCraft itself offers get a wording of their own, so each can
             // be said in another language; any other key is the document's and goes in as it stands.

@@ -2887,6 +2887,35 @@ fn the_pages_panel_tools_act_on_the_selected_pages() {
     assert_eq!(h.state().session.get(id).unwrap().info.pages.len(), 2, "each is one undo step");
 }
 
+/// Extend page: the Pages panel's Page tools and Pages ▸ Extend page to the right grow the
+/// selected pages, leaving room to write notes in, one undo step each.
+#[test]
+fn the_pages_panel_extends_the_selected_pages_for_notes() {
+    let mut h = harness(&[("panel", "pages")]);
+    let id = h.state().views[0].id;
+    let sizes = |h: &Harness<'static, PdfCraftApp>| h.state().session.get(id).unwrap().info.pages.iter().map(|p| (p.width, p.height)).collect::<Vec<_>>();
+    let before = sizes(&h);
+    let step = (10.0 / 2.54 * 72.0) as f32;
+    h.state_mut().views[0].select_pages(&[1]);
+    h.run_steps(2);
+    h.get_all_by_label("Page tools").find(|n| n.rect().left() > 1000.0).expect("Page tools in the Pages panel").click();
+    h.run_steps(2);
+    h.get_by_label("Extend the selected pages downward").click();
+    h.run_steps(3);
+    let after = sizes(&h);
+    assert_eq!((after[0], after[2]), (before[0], before[2]), "only the selection grows");
+    assert_eq!(after[1].0, before[1].0);
+    assert!((after[1].1 - before[1].1 - step).abs() < 0.01, "10 cm taller: {:?} → {:?}", before[1], after[1]);
+    assert_eq!(h.state().session.get(id).unwrap().can_undo(), Some("Extend page"));
+    h.state_mut().execute("page.extend_right");
+    h.run_steps(3);
+    assert!((sizes(&h)[1].0 - before[1].0 - step).abs() < 0.01, "10 cm wider");
+    h.state_mut().execute("edit.undo");
+    h.state_mut().execute("edit.undo");
+    h.run_steps(2);
+    assert_eq!(sizes(&h), before, "each is one undo step");
+}
+
 /// CodeRabbit on #4583: the Page tools menu's file items work from the menu too. Insert pages
 /// from a file puts the picked file's pages after the selection; Extract the selected pages
 /// opens Extract for the selection and writes it.

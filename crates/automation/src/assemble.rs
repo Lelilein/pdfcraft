@@ -157,6 +157,19 @@ impl Automation {
         self.apply(a, Edit::InsertBlankPage { at, width, height })
     }
 
+    pub(crate) fn page_extend(&mut self, a: &Args) -> Result<Value> {
+        use pdfcraft_engine::{EXTEND_PAGE_STEP, PageSide};
+        let pages = self.pages(a, "pages")?;
+        let side = match a.opt_str("side")? {
+            None => PageSide::Bottom,
+            Some(s) => PageSide::from_name(s).ok_or_else(|| ToolError::InvalidArgs(format!("side must be \"bottom\" or \"right\", not {s:?}")))?,
+        };
+        let amount = a.opt_num("amount")?.unwrap_or(EXTEND_PAGE_STEP);
+        let mut out = self.apply(a, Edit::ExtendPage { pages, side, amount })?;
+        out["page_sizes"] = json!(self.doc(a)?.info.pages.iter().map(|p| [p.width, p.height]).collect::<Vec<_>>());
+        Ok(out)
+    }
+
     pub(crate) fn insert_file(&mut self, a: &Args) -> Result<Value> {
         let at = self.position(a, "at")?;
         let path = self.resolve(a.str("path")?, false)?;
