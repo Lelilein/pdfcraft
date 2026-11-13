@@ -2893,7 +2893,8 @@ fn the_pages_panel_tools_act_on_the_selected_pages() {
 fn the_pages_panel_extends_the_selected_pages_for_notes() {
     let mut h = harness(&[("panel", "pages")]);
     let id = h.state().views[0].id;
-    let sizes = |h: &Harness<'static, PdfCraftApp>| h.state().session.get(id).unwrap().info.pages.iter().map(|p| (p.width, p.height)).collect::<Vec<_>>();
+    let sizes =
+        |h: &Harness<'static, PdfCraftApp>| h.state().session.get(id).unwrap().info.pages.iter().map(|p| (p.width, p.height)).collect::<Vec<_>>();
     let before = sizes(&h);
     let step = (10.0 / 2.54 * 72.0) as f32;
     h.state_mut().views[0].select_pages(&[1]);
